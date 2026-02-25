@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lantern - Walk Safe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Fredoka:wght@300;400;500;600&family=Inter:wght@400;500;600;700&family=Patrick+Hand&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+      @font-face {
+        font-family: 'Centaur';
+        src: local('Centaur');
+        font-weight: 400;
+      }
+      body {
+        font-family: 'Centaur', 'Cormorant Garamond', serif;
+        /* background-color handled by DayNightBackground */
+        color: #1a1a1a;
+      }
+      h1 {
+        font-family: 'Playfair Display', serif;
+      }
+      h2, h3, h4 {
+        font-family: 'Centaur', 'Cormorant Garamond', serif;
+        font-weight: 400;
+      }
+      .font-hand {
+        font-family: 'Patrick Hand', cursive;
+      }
+      .font-sans {
+        font-family: 'Inter', sans-serif;
+      }
+      .font-centaur {
+        font-family: 'Centaur', 'Cormorant Garamond', serif;
+        font-weight: 400;
+      }
+      /* Custom scrollbar for webkit */
+      ::-webkit-scrollbar {
+        width: 10px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0B1120;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #FF6B6B;
+        border-radius: 5px;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              cream: '#FFFDF5', // Light Cream
+              ink: '#1a1a1a',   // Dark Ink
+              lantern: {
+                DEFAULT: '#FF6B6B',
+                light: '#FF8E8E',
+                dark: '#E05555'
+              },
+              teal: {
+                DEFAULT: '#4ECDC4',
+                dark: '#3AB7AF'
+              },
+              mustard: '#FFE66D'
+            }
+          }
+        }
+      }
+    </script>
+    <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.564.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "framer-motion": "https://esm.sh/framer-motion@^12.34.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
