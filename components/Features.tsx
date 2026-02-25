@@ -168,20 +168,6 @@ const FeatureCard: React.FC<{
 const Features: React.FC = () => {
   return (
     <section className="pb-24 pt-20 px-6 relative overflow-hidden">
-      {/* Decorative Doodles */}
-      <svg className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20" viewBox="0 0 100 100" preserveAspectRatio="none">
-        {/* Winding path going downwards */}
-        <path 
-          d="M50 0 Q 60 10 50 20 T 40 40 T 60 60 T 50 80 T 40 100" 
-          fill="none" 
-          stroke="#FF8E8E" 
-          strokeWidth="0.5" 
-          strokeDasharray="2,2" 
-        />
-        <circle cx="50" cy="20" r="2" fill="none" stroke="#4ECDC4" strokeWidth="0.5" />
-        <circle cx="40" cy="60" r="3" fill="none" stroke="#FFE66D" strokeWidth="0.5" />
-      </svg>
-
       <div className="container mx-auto max-w-6xl relative z-10">
         <div className="text-center mb-16 max-w-2xl mx-auto">
           <h2 className="text-5xl md:text-6xl mb-6 text-white font-centaur">More than just a map.</h2>

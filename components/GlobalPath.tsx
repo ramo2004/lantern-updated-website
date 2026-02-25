@@ -29,7 +29,7 @@ const GlobalPath: React.FC = () => {
           stroke="#FFE66D" 
           strokeWidth="3"
           strokeLinecap="round"
-          strokeDasharray="4 6"
+          strokeDasharray="1.5 3"
           vectorEffect="non-scaling-stroke"
           style={{ pathLength: smoothProgress }}
         />
