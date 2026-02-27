@@ -1,24 +1,39 @@
-import React from 'react';
-import { motion, useScroll, useSpring } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import { m, useReducedMotion, useSpring } from 'framer-motion';
+import { GLOBAL_PATH_SPRING } from './motionConfig';
+import { useGlobalScrollProgress } from './ScrollProgressContext';
+import { VISUAL_THEME } from './visualTheme';
 
 const GlobalPath: React.FC = () => {
-  const { scrollYProgress } = useScroll();
+  const [isPathReady, setIsPathReady] = useState(false);
+  const scrollYProgress = useGlobalScrollProgress();
+  const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      setIsPathReady(true);
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, []);
   
   // Smooth the scroll input slightly so the drawing doesn't instantly snap
-  const smoothProgress = useSpring(scrollYProgress, { 
-    stiffness: 80, 
-    damping: 20, 
-    restDelta: 0.001 
-  });
+  const smoothProgress = useSpring(scrollYProgress, GLOBAL_PATH_SPRING);
+  const pathProgress = prefersReducedMotion ? scrollYProgress : smoothProgress;
 
   return (
-    <div className="fixed inset-0 z-[5] pointer-events-none opacity-50 mix-blend-overlay">
+    <div
+      aria-hidden="true"
+      className="fixed inset-0 z-[5] pointer-events-none opacity-50 mix-blend-overlay transition-opacity duration-200"
+      style={{ opacity: isPathReady ? 0.5 : 0 }}
+    >
       <svg 
+        focusable="false"
         className="w-full h-full" 
         viewBox="0 0 100 100" 
         preserveAspectRatio="none"
       >
-        <motion.path 
+        <m.path 
           d="
             M 10 -5 
             C 90 15, 90 30, 50 40 
@@ -26,12 +41,12 @@ const GlobalPath: React.FC = () => {
             C 90 90, 70 105, 50 105
           "
           fill="none" 
-          stroke="#FFE66D" 
+          stroke={VISUAL_THEME.pathStroke}
           strokeWidth="3"
           strokeLinecap="round"
           strokeDasharray="1.5 3"
           vectorEffect="non-scaling-stroke"
-          style={{ pathLength: smoothProgress }}
+          style={{ pathLength: pathProgress }}
         />
         
         {/* The character walking dot at the tip of the line */}

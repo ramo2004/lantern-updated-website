@@ -1,0 +1,24 @@
+@keyframes twinkle {
+  0%, 100% { opacity: var(--twinkle-min, 0.66); transform: scale(0.92); }
+  50% { opacity: var(--twinkle-max, 1); transform: scale(1.22); }
+}
+
+/* Avoid dozens of concurrent decorative animations on mobile/coarse-pointer devices. */
+@media (max-width: 767px), (pointer: coarse) {
+  .star-dot {
+    animation: none !important;
+    opacity: var(--twinkle-min, 0.72) !important;
+    transform: none !important;
+  }
+}
+
+/* Keep browser autofill from introducing sharp-edged blocks inside rounded inputs. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #1a1a1a;
+  caret-color: #1a1a1a;
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+  box-shadow: 0 0 0 1000px #ffffff inset;
+  border-radius: 9999px;
+}

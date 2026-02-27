@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { RotateCcw } from 'lucide-react';
 
 const MAP_WIDTH = 270;
 const MAP_HEIGHT = 430;
 const PLAYER_SIZE = 16;
 const SPEED = 4;
+const CROWD_COLLISION_PADDING = 3;
 
 type Position = { x: number, y: number };
 
@@ -21,6 +22,11 @@ const Lights = [
   { x: 230, y: 85, radius: 70, intensity: 1 },
 ];
 
+const CROWD_ZONES = [
+  { x: 88, y: 242, radius: 34, axis: 'x', drift: 20, speed: 0.95 },
+  { x: 182, y: 316, radius: 30, axis: 'y', drift: 16, speed: 1.2 },
+] as const;
+
 // Defining buildings (obstacles)
 const Buildings = [
   { x: 10, y: 10, w: 90, h: 80 },
@@ -34,18 +40,38 @@ const Buildings = [
   { x: 100, y: 360, w: 160, h: 60 },
 ];
 
+const getDynamicLightMultiplier = (index: number, elapsedSec: number) => {
+  // Alternate lights gently flicker to make route choice less static.
+  if (index % 2 === 0) return 1;
+  return 0.72 + 0.28 * Math.sin(elapsedSec * 2 + index * 1.3);
+};
+
+const getCrowdZonesAtTime = (elapsedSec: number) =>
+  CROWD_ZONES.map((zone, index) => {
+    const offset = Math.sin(elapsedSec * zone.speed + index) * zone.drift;
+    return {
+      x: zone.axis === 'x' ? zone.x + offset : zone.x,
+      y: zone.axis === 'y' ? zone.y + offset : zone.y,
+      radius: zone.radius,
+    };
+  });
+
 export const MiniGame: React.FC = () => {
   const [player, setPlayer] = useState<Position>(INITIAL_POS);
   const [score, setScore] = useState(100);
   const [gameState, setGameState] = useState<'playing' | 'won' | 'lost'>('playing');
   const [keys, setKeys] = useState<{ [key: string]: boolean }>({});
   const requestRef = useRef<number>();
+  const startTimeRef = useRef<number>(Date.now());
+  const lastFrameTimeRef = useRef<number | null>(null);
 
   const restart = () => {
     setPlayer(INITIAL_POS);
     setScore(100);
     setGameState('playing');
     setKeys({});
+    startTimeRef.current = Date.now();
+    lastFrameTimeRef.current = null;
   };
 
   useEffect(() => {
@@ -72,8 +98,15 @@ export const MiniGame: React.FC = () => {
     };
   }, [gameState]);
 
-  const update = () => {
+  const update = (now: number) => {
     if (gameState !== 'playing') return;
+    const previousFrameTime = lastFrameTimeRef.current ?? now;
+    // Clamp delta so tab switches/backgrounding don't cause giant score jumps.
+    const deltaSec = Math.min((now - previousFrameTime) / 1000, 0.05);
+    lastFrameTimeRef.current = now;
+
+    const elapsedSec = (now - startTimeRef.current) / 1000;
+    const crowdZones = getCrowdZonesAtTime(elapsedSec);
 
     setPlayer(prev => {
       let dx = 0; let dy = 0;
@@ -127,20 +160,31 @@ export const MiniGame: React.FC = () => {
     // Update light score
     setPlayer(currentPos => {
       let maxLight = 0;
-      for (const light of Lights) {
+      for (const [index, light] of Lights.entries()) {
+        const effectiveRadius = light.radius * 0.9;
+        const lightMultiplier = getDynamicLightMultiplier(index, elapsedSec);
         const dist = Math.hypot(currentPos.x - light.x, currentPos.y - light.y);
-        if (dist < light.radius) {
+        if (dist < effectiveRadius) {
           // Flatten light intensity curve to make it more obvious when you are 'in' vs 'out'
-          const intensity = Math.pow((1 - dist / light.radius), 0.5) * light.intensity;
+          const intensity = Math.pow((1 - dist / effectiveRadius), 0.5) * light.intensity * lightMultiplier;
           maxLight = Math.max(maxLight, intensity);
         }
       }
+      const inCrowdZone = crowdZones.some((zone) => {
+        const distance = Math.hypot(currentPos.x - zone.x, currentPos.y - zone.y);
+        // Keep crowd zones punishing, but avoid overly harsh edge proximity losses.
+        return distance <= zone.radius + CROWD_COLLISION_PADDING;
+      });
+      if (inCrowdZone) {
+        setScore(0);
+        setGameState('lost');
+        return currentPos;
+      }
 
       setScore(prev => {
-        // More forgiving penalty when in the dark. 
-        // ~60 frames per second. To die in ~3 seconds = lose ~0.55 per frame
-        const change = maxLight > 0.3 ? 1.0 : -0.55;
-        const newScore = Math.max(0, Math.min(100, prev + change));
+        // Rate-based score changes for smooth, gradual depletion and consistent behavior across devices.
+        let changePerSecond = maxLight > 0.34 ? 8 : -36;
+        const newScore = Math.max(0, Math.min(100, prev + changePerSecond * deltaSec));
         if (newScore === 0) setGameState('lost');
         return newScore;
       });
@@ -151,11 +195,15 @@ export const MiniGame: React.FC = () => {
   };
 
   useEffect(() => {
+    lastFrameTimeRef.current = null;
     requestRef.current = requestAnimationFrame(update);
     return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
   }, [keys, gameState]);
+
+  const renderElapsedSec = (Date.now() - startTimeRef.current) / 1000;
+  const activeCrowdZones = getCrowdZonesAtTime(renderElapsedSec);
 
   return (
     <div className="relative w-full h-full font-centaur">
@@ -173,6 +221,14 @@ export const MiniGame: React.FC = () => {
           <rect key={`b-${i}`} x={b.x} y={b.y} width={b.w} height={b.h} fill="#1e293b" stroke="#0f172a" strokeWidth="2" rx="2" />
         ))}
 
+        {activeCrowdZones.map((zone, i) => (
+          <g key={`crowd-${i}`}>
+            <circle cx={zone.x} cy={zone.y} r={zone.radius} fill="rgba(248, 113, 113, 0.17)" />
+            <circle cx={zone.x} cy={zone.y} r={zone.radius * 0.55} fill="rgba(248, 113, 113, 0.11)" />
+            <circle cx={zone.x} cy={zone.y} r={zone.radius} fill="none" stroke="rgba(248,113,113,0.55)" strokeWidth="1.5" strokeDasharray="4 4" />
+          </g>
+        ))}
+
         {/* Light sources */}
         <defs>
           <filter id="glow">
@@ -184,12 +240,15 @@ export const MiniGame: React.FC = () => {
           </filter>
         </defs>
 
-        {Lights.map((l, i) => (
+        {Lights.map((l, i) => {
+          const lightMultiplier = getDynamicLightMultiplier(i, renderElapsedSec);
+          return (
           <g key={`l-${i}`}>
             <circle cx={l.x} cy={l.y} r={l.radius} fill="url(#lightGrad)" opacity="0.6" />
-            <circle cx={l.x} cy={l.y} r="3" fill="#FFE66D" filter="url(#glow)" />
+            <circle cx={l.x} cy={l.y} r="3" fill="#FFE66D" filter="url(#glow)" opacity={0.65 + lightMultiplier * 0.35} />
           </g>
-        ))}
+          );
+        })}
 
         <defs>
           <radialGradient id="lightGrad">
@@ -237,67 +296,36 @@ export const MiniGame: React.FC = () => {
       <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start pointer-events-none">
         
         {/* Light Score Meter */}
-        <div className="bg-white/90 backdrop-blur-sm px-3 py-1 pb-1.5 rounded-xl border-2 border-slate-900 shadow-md flex flex-col pointer-events-auto items-center">
+        <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl border-2 border-slate-900 shadow-md flex flex-col pointer-events-auto items-center">
           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Light Score</span>
-          <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden border border-slate-300">
+          <div className="w-[90px] h-2.5 bg-slate-200 rounded-full overflow-hidden border border-slate-300">
             <div 
-              className={`h-full transition-all duration-300 ${score > 50 ? 'bg-mustard' : score > 20 ? 'bg-orange-400' : 'bg-red-500'}`} 
+              className="h-full transition-all duration-300 bg-mustard"
               style={{ width: `${score}%` }}
             />
           </div>
         </div>
 
         {/* Restart Button */}
-        <button 
+        <button
+          type="button"
+          aria-label="Restart game"
           onClick={restart}
           className="bg-white/90 backdrop-blur-sm p-2 rounded-xl border-2 border-slate-900 shadow-md hover:bg-slate-100 active:scale-95 transition-all pointer-events-auto text-slate-800"
         >
-          <RotateCcw size={16} strokeWidth={3} />
-        </button>
-      </div>
-
-      {/* On-Screen D-Pad for Mobile / Clicking */}
-      <div className="absolute bottom-4 right-4 grid grid-cols-3 gap-1.5 pointer-events-auto select-none opacity-80 hover:opacity-100 transition-opacity">
-        <div />
-        <button 
-          onPointerDown={() => setKeys(prev => ({ ...prev, ArrowUp: true }))}
-          onPointerUp={() => setKeys(prev => ({ ...prev, ArrowUp: false }))}
-          onPointerLeave={() => setKeys(prev => ({ ...prev, ArrowUp: false }))}
-          className="w-12 h-12 bg-white/90 backdrop-blur-sm rounded-xl border-2 border-slate-900 shadow-[2px_3px_0px_0px_rgba(15,23,42,1)] flex items-center justify-center active:translate-y-[2px] active:shadow-none transition-transform"
-        >
-          <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[10px] border-transparent border-b-slate-900" />
-        </button>
-        <div />
-        <button 
-          onPointerDown={() => setKeys(prev => ({ ...prev, ArrowLeft: true }))}
-          onPointerUp={() => setKeys(prev => ({ ...prev, ArrowLeft: false }))}
-          onPointerLeave={() => setKeys(prev => ({ ...prev, ArrowLeft: false }))}
-          className="w-12 h-12 bg-white/90 backdrop-blur-sm rounded-xl border-2 border-slate-900 shadow-[2px_3px_0px_0px_rgba(15,23,42,1)] flex items-center justify-center active:translate-y-[2px] active:shadow-none transition-transform"
-        >
-          <div className="w-0 h-0 border-t-[8px] border-b-[8px] border-r-[10px] border-transparent border-r-slate-900" />
-        </button>
-        <button 
-          onPointerDown={() => setKeys(prev => ({ ...prev, ArrowDown: true }))}
-          onPointerUp={() => setKeys(prev => ({ ...prev, ArrowDown: false }))}
-          onPointerLeave={() => setKeys(prev => ({ ...prev, ArrowDown: false }))}
-          className="w-12 h-12 bg-white/90 backdrop-blur-sm rounded-xl border-2 border-slate-900 shadow-[2px_3px_0px_0px_rgba(15,23,42,1)] flex items-center justify-center active:translate-y-[2px] active:shadow-none transition-transform"
-        >
-          <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[10px] border-transparent border-t-slate-900" />
-        </button>
-        <button 
-          onPointerDown={() => setKeys(prev => ({ ...prev, ArrowRight: true }))}
-          onPointerUp={() => setKeys(prev => ({ ...prev, ArrowRight: false }))}
-          onPointerLeave={() => setKeys(prev => ({ ...prev, ArrowRight: false }))}
-          className="w-12 h-12 bg-white/90 backdrop-blur-sm rounded-xl border-2 border-slate-900 shadow-[2px_3px_0px_0px_rgba(15,23,42,1)] flex items-center justify-center active:translate-y-[2px] active:shadow-none transition-transform"
-        >
-          <div className="w-0 h-0 border-t-[8px] border-b-[8px] border-l-[10px] border-transparent border-l-slate-900" />
+          <RotateCcw aria-hidden="true" size={16} strokeWidth={3} />
         </button>
       </div>
 
       {/* Game Over / Win Overlays */}
       {gameState !== 'playing' && (
-        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] rounded-[25px] flex items-center justify-center flex-col z-20">
-          <motion.div 
+        <div
+          className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] rounded-[25px] flex items-center justify-center flex-col z-20"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="minigame-result-title"
+        >
+          <m.div 
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="bg-white p-6 rounded-2xl border-4 border-slate-900 shadow-2xl text-center flex flex-col items-center"
@@ -305,23 +333,24 @@ export const MiniGame: React.FC = () => {
             {gameState === 'won' ? (
               <>
                 <div className="text-4xl mb-2">🎉</div>
-                <h3 className="text-2xl font-bold text-teal mb-2">You Made It!</h3>
+                <h3 id="minigame-result-title" className="text-2xl font-bold text-teal mb-2">You Made It!</h3>
                 <p className="text-slate-600 mb-4 leading-tight text-sm">You navigated the safest, brightest streets.</p>
               </>
             ) : (
               <>
                 <div className="text-4xl mb-2 shadow-sm">🌑</div>
-                <h3 className="text-2xl font-bold text-lantern mb-2">It's Too Dark</h3>
+                <h3 id="minigame-result-title" className="text-2xl font-bold text-lantern mb-2">It's Too Dark</h3>
                 <p className="text-slate-600 mb-4 leading-tight text-sm">You stayed in the dark for too long!</p>
               </>
             )}
-            <button 
+            <button
+              type="button"
               onClick={restart}
               className="bg-ink text-white px-6 py-2 rounded-full font-bold hover:bg-slate-800 transition-colors shadow-md"
             >
-              Play Again <span className="opacity-50 text-xs ml-1 font-normal">(Enter)</span>
+              Play Again
             </button>
-          </motion.div>
+          </m.div>
         </div>
       )}
     </div>
