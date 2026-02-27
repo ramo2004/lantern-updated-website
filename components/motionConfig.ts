@@ -11,8 +11,9 @@ export const SCROLL_EXPERIENCE_MOTION = {
   sceneOpacityValues: [1, 1, 0],
   textYRange: [0, 0.72, 0.9],
   textYValues: ["0%", "0%", "10%"],
-  streetlightsOpacityRange: [0, 0.56, 0.9],
-  streetlightsOpacityValues: [0.9, 0.9, 0],
+  // Ease lights out in two steps so they don't feel like a hard snap-off.
+  streetlightsOpacityRange: [0, 0.5, 0.74, 0.9],
+  streetlightsOpacityValues: [0.9, 0.9, 0.45, 0],
 } as const;
 
 export const DAY_NIGHT_MOTION = {

@@ -1,5 +1,20 @@
 # HANDOFF
 
+## Session update (2026-02-26, waitlist success copy + message row polish)
+- Updated waitlist success copy in `components/Hero.tsx` to be more explicit/actionable:
+- “You’re in. We’ll send your invite as soon as we launch.”
+- Added a subtle check mark prefix for clearer positive confirmation.
+- Polished message row sizing/placement under the form by increasing reserved row height and normalizing chip padding/shape/line-height so it sits cleaner beneath the CTA on mobile and desktop.
+- Verified root site still builds: `npm run build` passed.
+
+## Session update (2026-02-26, softened streetlight fade-out)
+- Tuned streetlight fade behavior in `components/motionConfig.ts` to reduce snap-off feel.
+- Updated streetlight opacity curve from a simple hold->drop to a multi-stop fade:
+- `streetlightsOpacityRange: [0, 0.5, 0.74, 0.9]`
+- `streetlightsOpacityValues: [0.9, 0.9, 0.45, 0]`
+- Result: lights now dim more gradually before disappearing during the section transition.
+- Verified root site still builds: `npm run build` passed.
+
 ## Session update (2026-02-26, softened crowd-zone instant-loss sensitivity)
 - Loosened instant-loss crowd collision in `components/MiniGame.tsx` to reduce over-harsh near-edge failures.
 - Added `CROWD_COLLISION_PADDING = 3` and updated collision check to `distance <= zone.radius + CROWD_COLLISION_PADDING` (previously used full player radius expansion).

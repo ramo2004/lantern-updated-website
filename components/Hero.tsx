@@ -177,22 +177,25 @@ const Hero: React.FC = () => {
                 </button>
               </form>
 
-              <div className="min-h-5 pt-2" aria-live="polite">
+              <div className="min-h-[38px] pt-2 flex items-start" aria-live="polite">
                 {emailError && (
                   <p
                     id="waitlist-email-error"
-                    className="inline-flex max-w-full rounded-2xl bg-white/70 px-3 py-1 text-sm text-lantern-dark font-centaur text-center sm:text-left shadow-sm border border-lantern/10"
+                    className="inline-flex max-w-full rounded-xl bg-white/75 px-3.5 py-1.5 text-[0.95rem] leading-snug text-lantern-dark font-centaur text-left shadow-sm border border-lantern/10"
                     style={{ color: heroPink, borderColor: 'rgba(255,107,107,0.22)' }}
                   >
                     {emailError}
                   </p>
                 )}
                 {!emailError && waitlistStatus === 'success' && (
-                  <p className="inline-flex max-w-full rounded-2xl bg-white/70 px-3 py-1 text-sm text-emerald-700 font-centaur text-center sm:text-left shadow-sm border border-emerald-200/60">You&apos;re on the waitlist.</p>
+                  <p className="inline-flex items-center gap-1.5 max-w-full rounded-xl bg-white/75 px-3.5 py-1.5 text-[0.95rem] leading-snug text-emerald-700 font-centaur text-left shadow-sm border border-emerald-200/70">
+                    <span aria-hidden="true">✓</span>
+                    You&apos;re in. We&apos;ll send your invite as soon as we launch.
+                  </p>
                 )}
                 {!emailError && waitlistStatus === 'error' && (
                   <p
-                    className="inline-flex max-w-full rounded-2xl bg-white/70 px-3 py-1 text-sm font-centaur text-center sm:text-left shadow-sm border"
+                    className="inline-flex max-w-full rounded-xl bg-white/75 px-3.5 py-1.5 text-[0.95rem] leading-snug font-centaur text-left shadow-sm border"
                     style={{ color: heroPink, borderColor: 'rgba(255,107,107,0.22)' }}
                   >
                     Something went wrong. Please try again.
